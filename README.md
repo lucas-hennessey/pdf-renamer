@@ -2,7 +2,7 @@
 
 A small macOS app that renames PDFs to the title in their header and moves them into a folder of your choice.
 
-Click the app, pick a **source** folder, pick a **destination** folder. Every PDF in the source folder is renamed to the largest text at the top of its first page and moved to the destination.
+Click the app, pick a **source** folder, pick a **destination** folder. Every PDF in the source folder is renamed to its title (the name in the PDF's header) and moved to the destination.
 
 For example, a file called `fdo_results_export13.pdf` whose header reads "Castellini Foundation" becomes `Castellini Foundation.pdf`.
 
@@ -29,7 +29,7 @@ The app is not signed with an Apple developer certificate. If macOS blocks the f
 
 ## Behavior
 
-- The name is the largest text in the top 40% of page 1. If a title wraps onto several lines of the same size, they are joined.
+- The name is the PDF's built-in title. If it has none, it is the largest text in the top 40% of page 1. If a title wraps onto several lines of the same size, they are joined.
 - A file whose top text has no letters or digits is left in place and listed as skipped.
 - Duplicate names get a suffix: `Name.pdf`, `Name (2).pdf`, `Name (3).pdf`. Nothing is overwritten.
 - Characters macOS doesn't allow in filenames (`/ : \ * ? " < > |`) are replaced with `-`. Names are capped at 150 characters.

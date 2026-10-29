@@ -1,5 +1,5 @@
 // Usage: rename_pdfs <source-dir> <dest-dir>
-// Renames each PDF in source-dir to the largest text at the top of its first page,
+// Renames each PDF in source-dir to its title (or, failing that, the largest text on page 1),
 // and moves it into dest-dir. Prints one line per file, then a summary.
 import Foundation
 import PDFKit
@@ -20,9 +20,14 @@ func cleanName(_ s: String) -> String {
     return String(name.prefix(150))
 }
 
-// Name = largest text in the top 40% of page 1 (wrapped title lines of that size are joined).
+// Name = the PDF's built-in title if it has one, else the largest text in the top 40% of
+// page 1 (wrapped title lines of that size are joined).
 func headerName(of url: URL) -> String? {
-    guard let page = PDFDocument(url: url)?.page(at: 0) else { return nil }
+    guard let doc = PDFDocument(url: url), let page = doc.page(at: 0) else { return nil }
+    if let t = doc.documentAttributes?[PDFDocumentAttribute.titleAttribute] as? String {
+        let name = cleanName(t)
+        if name.contains(where: { $0.isLetter || $0.isNumber }) { return name }
+    }
     let box = page.bounds(for: .cropBox)
     let top = box.minY + box.height * 0.6
     var lines: [(text: String, size: CGFloat, y: CGFloat, height: CGFloat)] = []
