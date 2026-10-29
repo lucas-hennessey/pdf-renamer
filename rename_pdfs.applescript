@@ -16,7 +16,7 @@ if srcPath is dstPath then
 end if
 
 try
-	set report to do shell script quoted form of tool & " " & quoted form of srcPath & " " & quoted form of dstPath
+	set report to do shell script quoted form of tool & " " & quoted form of srcPath & " " & quoted form of dstPath & " 2>/dev/null"
 on error errMsg
 	display dialog "Something went wrong:" & return & errMsg buttons {"OK"} default button "OK" with icon stop
 	return

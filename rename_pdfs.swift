@@ -1,5 +1,5 @@
 // Usage: rename_pdfs <source-dir> <dest-dir>
-// Renames each PDF in source-dir to the first line of text on its first page,
+// Renames each PDF in source-dir to the largest text at the top of its first page,
 // and moves it into dest-dir. Prints one line per file, then a summary.
 import Foundation
 import PDFKit
@@ -20,13 +20,34 @@ func cleanName(_ s: String) -> String {
     return String(name.prefix(150))
 }
 
+// Name = largest text in the top 40% of page 1 (wrapped title lines of that size are joined).
 func headerName(of url: URL) -> String? {
-    guard let text = PDFDocument(url: url)?.page(at: 0)?.string else { return nil }
-    for line in text.split(whereSeparator: \.isNewline) {
-        let n = cleanName(String(line))
-        if !n.isEmpty { return n }
+    guard let page = PDFDocument(url: url)?.page(at: 0) else { return nil }
+    let box = page.bounds(for: .cropBox)
+    let top = box.minY + box.height * 0.6
+    var lines: [(text: String, size: CGFloat, y: CGFloat, height: CGFloat)] = []
+    for line in page.selection(for: box)?.selectionsByLine() ?? [] {
+        let b = line.bounds(for: page)
+        guard b.midY >= top, let attr = line.attributedString else { continue }
+        var size: CGFloat = 0
+        attr.enumerateAttribute(.font, in: NSRange(location: 0, length: attr.length)) { v, r, _ in
+            let part = attr.attributedSubstring(from: r).string
+            if let f = v as? NSFont, !part.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                size = max(size, f.pointSize)
+            }
+        }
+        let text = cleanName(attr.string)
+        if size > 0, text.contains(where: { $0.isLetter || $0.isNumber }) {
+            lines.append((text, size, b.midY, b.height))
+        }
     }
-    return nil
+    guard let best = lines.max(by: { $0.size == $1.size ? $0.y < $1.y : $0.size < $1.size }) else { return nil }
+    // Join directly adjacent lines of the same size below the first (wrapped titles).
+    var parts = [best]
+    for l in lines.filter({ abs($0.size - best.size) < 0.5 && $0.y < best.y }).sorted(by: { $0.y > $1.y }) {
+        if parts.last!.y - l.y < best.height * 1.8 { parts.append(l) } else { break }
+    }
+    return cleanName(parts.map(\.text).joined(separator: " "))
 }
 
 func uniqueURL(_ base: String) -> URL {
